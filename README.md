@@ -7,7 +7,17 @@ Its a weather Informer for your Location, and some more cities
 ## What I implemente
 I implement for the Network Layer: Alamofire. I have used protocols, enums, delegates and PODS.
 
-## PODS: 
+### If you have these pods:
+'Alamofire', '~> 4.5'
+'SwiftyJSON'
+'SVProgressHUD'
+-> RUN THE APP <-
+
+### if you haven't them:
+DELETE folder "Pods" and "WeatherTest.xcworkspace" and Follow the nest Steps..
+
+
+## INSTALL PODS & WORKSPACE: 
 Open Console, and only write  ```pod install```  in the path of the Project 
 
 ```
@@ -35,5 +45,5 @@ end
 
 end
 ```
-
-
+## And to Finish:
+Open the new "WeatherTest.xcworkspace"
