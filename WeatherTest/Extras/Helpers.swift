@@ -8,11 +8,11 @@
 
 import Foundation
 import UIKit
+import SVProgressHUD
 
 extension UIView {
     
     func setGradientBackground(colorOne: UIColor, colorTwo: UIColor) {
-        
         let gradientLayer = CAGradientLayer()
         gradientLayer.frame = bounds
         gradientLayer.colors = [colorOne.cgColor, colorTwo.cgColor]
@@ -22,5 +22,44 @@ extension UIView {
         
         layer.insertSublayer(gradientLayer, at: 0)
     }
+    
+}
 
+extension UIImageView {
+    func addBlurEffect() {
+        let blurEffect = UIBlurEffect(style: UIBlurEffect.Style.regular)
+        let blurEffectView = UIVisualEffectView(effect: blurEffect)
+        blurEffectView.frame = self.bounds
+        blurEffectView.alpha = 0.3
+        
+        blurEffectView.autoresizingMask = [.flexibleWidth, .flexibleHeight] // for supporting device rotation
+        self.addSubview(blurEffectView)
+    }
+}
+
+extension Double {
+    //Double to Decimal
+    func rounded(toPlaces places:Int) -> Double {
+        let divisor = pow(10.0, Double(places))
+        
+        return (self + divisor).rounded() / divisor
+    }
+}
+
+extension Date {
+    
+    func dayOfTheWeek() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "EEEE"
+        
+        return dateFormatter.string(from: self)
+    }
+    
+    func getHour() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "HH"
+        
+        return dateFormatter.string(from: self)
+    }
+    
 }

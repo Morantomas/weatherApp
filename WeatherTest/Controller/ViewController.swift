@@ -8,26 +8,38 @@
 
 import UIKit
 import CoreLocation
+import Alamofire
+import SVProgressHUD
 
 class ViewController: UIViewController {
 
+    @IBOutlet weak var imageBackGround: UIImageView!
     @IBOutlet weak var ciudadLabel: UILabel!
     @IBOutlet weak var countryLabel: UILabel!
     @IBOutlet weak var dateLabel: UILabel!
     @IBOutlet weak var currentTemp: UILabel!
     @IBOutlet weak var imageState: UIImageView!
+    @IBOutlet weak var tableView: UITableView!
+    @IBOutlet weak var loadingCityView: UIView!
+    @IBOutlet weak var loadingTableView: UIView!
     
+    var pronosticoExtendido: PronosticoModel?
+    var pronosticoDataSource: [PronosticoModel] = []
+    
+    var latitude: String?
+    var longitude: String?
     
     let locationManager = CLLocationManager()
-    var locationCoordinate: CLLocationCoordinate2D? {
-        didSet {
-            
-        }
-    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
+        SetupSVProgressHUD(withView: loadingCityView)
+//        SVProgressHUD.setContainerView(loadingCityView)
+//        SVProgressHUD.show(withStatus: "Loading... ")
+        
+        setDelegates()
+        setupBackGroundImage()
         checkLocation()
     }
     
@@ -41,8 +53,14 @@ class ViewController: UIViewController {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
     }
     
-    func setDelegatesForProtocol() {
+    func setupBackGroundImage() {
+        imageBackGround.addBlurEffect()
+    }
+    
+    func setDelegates() {
         NetworkingHandler.sharedInstance.responseDelegate = self
+        tableView.delegate = self
+        tableView.dataSource = self
     }
     
     func checkLocation() {
@@ -86,7 +104,29 @@ class ViewController: UIViewController {
             self.present(alert, animated: true, completion: nil)
         }
     }
+    
+    func SetupSVProgressHUD(withView view: UIView) {
+        SVProgressHUD.setRingThickness(3.0)
+        SVProgressHUD.setOffsetFromCenter(UIOffset.init(horizontal: 0, vertical: view.tag == 0 ? -200 : 200))
+        SVProgressHUD.setDefaultStyle(SVProgressHUDStyle.dark)
+        SVProgressHUD.setDefaultMaskType(SVProgressHUDMaskType.clear)
+        SVProgressHUD.show(withStatus: "Loading... ")
+    }
 
+}
+
+extension ViewController: UITableViewDelegate, UITableViewDataSource {
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "PronosticoCell") as! PronosticoTableViewCell
+        cell.configureCell(withData: self.pronosticoDataSource[indexPath.row])
+        
+        return cell
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return self.pronosticoDataSource.count
+    }
 }
 
 extension ViewController: CLLocationManagerDelegate {
@@ -101,13 +141,18 @@ extension ViewController: CLLocationManagerDelegate {
             
             print("Longitude = \(location.coordinate.longitude), Latitude = \(location.coordinate.latitude)" )
             
-            let latitude = String(location.coordinate.latitude)
-            let longitude = String(location.coordinate.longitude)
+            latitude = String(location.coordinate.latitude)
+            longitude = String(location.coordinate.longitude)
             
-            let params: [String:String] = ["lat": latitude, "lon": longitude, "AppID": APP_ID]
+            if let lat = self.latitude, let long = self.longitude {
+                let params: [String:String] = ["lat": lat, "lon": long, "AppID": APP_ID]
+                NetworkingHandler.sharedInstance.getWeatherLocation(url: WEATHER_URL, params: params)
+            } else {
+                SVProgressHUD.dismiss()
+                showSimpleAlert()
+            }
+
             
-            setDelegatesForProtocol()
-            NetworkingHandler.sharedInstance.getWeatherLocation(url: WEATHER_URL, params: params)
         }
     }
     
@@ -121,19 +166,71 @@ extension ViewController: CLLocationManagerDelegate {
 //        cityLabel.text = "Location Unavailable"
     }
     
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "SelectCity" {
+            let destinationVC = segue.destination as! SelectCityController
+            destinationVC.delegate = self
+        }
+    }
 }
 
 extension ViewController: GetResponseProtocol {
-    
+
     func SuccesResponse(_ responseCityModel: CityModel) {
         self.ciudadLabel.text = responseCityModel.cityName ?? "City_error"
         self.countryLabel.text = responseCityModel.countryCity ?? "Country_Error"
         self.dateLabel.text = responseCityModel.currentDate ?? "Date_Error"
         self.currentTemp.text = "\(responseCityModel.temperature ?? 0.001)℃"
+        self.imageState.image = UIImage(named: responseCityModel.weatherIcon ?? "dunno")
+        
+        SVProgressHUD.dismiss()
+        
+//        SVProgressHUD.setContainerView(loadingTableView)
+//        SVProgressHUD.show(withStatus: "Loading... ")
+//        SVProgressHUD.showProgress(loadingTableView)
+        SetupSVProgressHUD(withView: loadingTableView)
+        
+        let params: [String:String] = ["lat": latitude ?? "", "lon": longitude ?? "", "AppID": APP_ID]
+        NetworkingHandler.sharedInstance.getPronosticoExtended(url: WEATHER_URL_EXTENDED, params: params)
+    }
+    
+    func SuccesResponsePronosticoExtended(_ response: [PronosticoModel]) {
+        self.pronosticoDataSource = response
+        self.tableView.reloadData()
+        
+        SVProgressHUD.dismiss()
     }
     
     func ErrorResponse(_ responseData: AnyObject!) {
+        SVProgressHUD.dismiss()
         showSimpleAlert()
+    }
+    
+}
+
+extension ViewController: SelectCityProtocol {
+    
+    func changeCity(city: CLLocationCoordinate2D) {
+        
+        ciudadLabel.text = ""
+        countryLabel.text = ""
+        dateLabel.text = ""
+        currentTemp.text = ""
+        imageState.image = UIImage()
+        
+        pronosticoDataSource.removeAll()
+        tableView.reloadData()
+        
+        self.latitude = city.latitude.description
+        self.longitude = city.longitude.description
+        
+        if let lat = self.latitude, let long = self.longitude {
+            SetupSVProgressHUD(withView: loadingCityView)
+            let params: [String:String] = ["lat": lat, "lon": long, "AppID": APP_ID]
+            NetworkingHandler.sharedInstance.getWeatherLocation(url: WEATHER_URL, params: params)
+        } else {
+            showSimpleAlert()
+        }
     }
     
 }

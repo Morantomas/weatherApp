@@ -10,6 +10,10 @@ import UIKit
 
 class PronosticoTableViewCell: UITableViewCell {
 
+    @IBOutlet weak var timeLabel: UILabel!
+    @IBOutlet weak var dateLabel: UILabel!
+    @IBOutlet weak var iconImage: UIImageView!
+    
     override func awakeFromNib() {
         super.awakeFromNib()
         // Initialization code
@@ -19,6 +23,12 @@ class PronosticoTableViewCell: UITableViewCell {
         super.setSelected(selected, animated: animated)
 
         // Configure the view for the selected state
+    }
+    
+    func configureCell(withData data:PronosticoModel) {
+        self.timeLabel.text = data.time
+        self.dateLabel.text = data.temp
+        self.iconImage.image = UIImage(named: data.weatherIcon ?? "dunno")
     }
 
 }

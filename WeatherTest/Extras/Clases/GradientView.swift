@@ -34,7 +34,7 @@ class GradientView: UIView {
         let layer: CAGradientLayer = self.layer as! CAGradientLayer
         layer.colors = [FirstColor.cgColor, SecondColor.cgColor]
         
-        layer.locations = [0.7]
+        layer.locations = [0.8]
         
         layer.startPoint = CGPoint(x: 0, y: 0)
         layer.endPoint = CGPoint(x: 0, y: 1)
